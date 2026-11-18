@@ -1,0 +1,30 @@
+{
+  "name": "s5-cadena-digital",
+  "version": "1.0.0",
+  "description": "Cadena digital (blockchain permisionada) para sellar y verificar la integridad de las denuncias del Sistema 5 de la Plataforma Digital Nacional",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "start:worker": "node --env-file-if-exists=.env --env-file-if-exists=.env.worker src/index.js --rol=worker",
+    "start:api": "node --env-file-if-exists=.env --env-file-if-exists=.env.api src/index.js --rol=api",
+    "start:panel": "node --env-file-if-exists=.env src/index.js --rol=panel",
+    "usuario-panel": "node --env-file-if-exists=.env scripts/usuario-panel.js",
+    "demo-panel": "node scripts/demo-panel.js",
+    "llaves": "node scripts/generar-llaves.js",
+    "llave-api": "node scripts/generar-llave-api.js",
+    "verificar-cadena": "node --env-file-if-exists=.env scripts/verificar-cadena.js",
+    "verificar-prueba": "node scripts/verificar-prueba.js",
+    "test": "node --test test/*.test.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.3",
+    "helmet": "^8.3.0",
+    "mongodb": "^7.8.0"
+  }
+}

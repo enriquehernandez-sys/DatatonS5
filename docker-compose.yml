@@ -1,0 +1,110 @@
+# Despliegue en el SERVIDOR SEPARADO de la cadena digital.
+# El MongoDB del S5 NO va aquí: se accede por red privada con usuario de solo lectura.
+#
+#   1. npm run llaves                         (genera llaves/)
+#   2. Coloque certificados TLS en ./tls
+#   3. cp .env.example .env  y ajuste
+#   4. docker compose up -d ledger-db && (inicialice replica set y ejecute mongo/crear-roles-ledger.js)
+#   5. docker compose up -d
+
+x-seguridad: &seguridad
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  tmpfs: [/tmp]
+
+services:
+  ledger-db:
+    image: mongo:8.0
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--auth", "--keyFile", "/etc/mongo/keyfile"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${LEDGER_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${LEDGER_ROOT_PASSWORD:?Defina LEDGER_ROOT_PASSWORD}
+    volumes:
+      - ledger-data:/data/db
+      - ./mongo/keyfile:/etc/mongo/keyfile:ro   # openssl rand -base64 756 > mongo/keyfile; chmod 400; chown 999
+    networks: [interna]            # sin puertos publicados: inaccesible desde fuera
+    restart: unless-stopped
+
+  worker:
+    <<: *seguridad
+    build: .
+    env_file: .env
+    environment:
+      ROL: worker
+      LLAVE_FIRMA_PATH: /run/secrets/firma_privada
+      LLAVES_CONFIANZA_DIR: /llaves/confianza
+    secrets: [firma_privada]
+    volumes:
+      - ./llaves/confianza:/llaves/confianza:ro
+    networks: [interna, s5]        # única pieza que habla con el S5
+    depends_on: [ledger-db]
+
+  api:
+    <<: *seguridad
+    build: .
+    env_file: .env
+    environment:
+      ROL: api
+      API_HOST: 0.0.0.0
+      LEDGER_MONGO_URI: ${LEDGER_API_URI:?Defina LEDGER_API_URI con el usuario s5_cadena_api}
+      LLAVES_CONFIANZA_DIR: /llaves/confianza
+      TLS_CERT_PATH: /tls/servidor.crt
+      TLS_KEY_PATH: /tls/servidor.key
+    volumes:
+      - ./llaves/confianza:/llaves/confianza:ro
+      - ./tls:/tls:ro
+    ports:
+      - "8443:8443"                # restringir con firewall a las IPs autorizadas
+    healthcheck:                   # si activa mTLS, ajuste o retire esta prueba
+      test: ["CMD", "node", "-e", "require('https').get('https://127.0.0.1:8443/salud',{rejectUnauthorized:false},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+    networks: [interna, s5]
+    depends_on: [ledger-db]
+
+  # Panel PÚBLICO de monitoreo. Sin llave privada y SIN acceso al S5 por defecto
+  # (agregue la red s5 y S5_MONGO_URI solo si desea la comparación en vivo para Contraloría).
+  panel:
+    <<: *seguridad
+    build: .
+    env_file: .env
+    environment:
+      ROL: panel
+      PANEL_HOST: 0.0.0.0
+      S5_MONGO_URI: ""
+      LEDGER_MONGO_URI: ${LEDGER_PANEL_URI:?Defina LEDGER_PANEL_URI con el usuario s5_cadena_panel}
+      LLAVES_CONFIANZA_DIR: /llaves/confianza
+      PANEL_SECRETO_SESION_PATH: /run/secrets/secreto_sesion
+      PANEL_TLS_CERT_PATH: /tls/panel.crt
+      PANEL_TLS_KEY_PATH: /tls/panel.key
+    secrets: [secreto_sesion]
+    volumes:
+      - ./llaves/confianza:/llaves/confianza:ro
+      - ./tls:/tls:ro
+    ports:
+      - "443:8444"                 # publicar detrás de WAF/proxy institucional
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('https').get('https://127.0.0.1:8444/salud',{rejectUnauthorized:false},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+    networks: [interna, publica]
+    depends_on: [ledger-db]
+
+secrets:
+  firma_privada:
+    file: ./llaves/firma-privada.pem
+  secreto_sesion:
+    file: ./llaves/panel-secreto.txt   # node -e "console.log(require('crypto').randomBytes(48).toString('base64'))" > llaves/panel-secreto.txt
+
+networks:
+  interna:
+    internal: true
+  s5:
+    driver: bridge
+  publica:
+    driver: bridge
+
+volumes:
+  ledger-data:

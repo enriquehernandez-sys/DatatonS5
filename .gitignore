@@ -1,0 +1,11 @@
+node_modules/
+.env
+llaves/
+tls/
+mongo/keyfile
+*.pem
+*.key
+MongoDB/
+.env.*
+!.env.example
+*.pfx

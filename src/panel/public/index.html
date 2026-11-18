@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Integridad Cadena S5</title>
+  <meta name="description" content="Monitoreo público de la integridad de la cadena digital del Sistema 5 (denuncias).">
+  <link rel="icon" href="icono.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="estilos.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+  <header class="top">
+    <div class="top-inner">
+      <a class="brand" href="#/panorama" aria-label="Inicio del panel">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="9" width="10" height="14" rx="3"/><rect x="20" y="9" width="10" height="14" rx="3"/><path d="M12 16h8"/></svg>
+        <span><strong>Cadena Digital S5</strong><small>Monitoreo de integridad</small></span>
+      </a>
+      <nav class="tabs" id="tabs" aria-label="Secciones"></nav>
+      <div class="session" id="session"></div>
+    </div>
+  </header>
+
+  <div class="notice" id="notice" role="note"></div>
+
+  <main id="contenido" tabindex="-1"></main>
+
+  <footer class="foot">
+    <p>Este panel muestra únicamente huellas criptográficas, encabezados de bloque e indicadores agregados.
+      Ningún dato personal de denunciantes, denunciados o testigos sale del Sistema 5.
+      Los conteos diarios menores a <span id="umbral">5</span> se publican como «&lt;<span id="umbral2">5</span>».</p>
+  </footer>
+
+  <dialog id="login" aria-labelledby="login-title">
+    <form method="dialog" id="login-form" class="login" novalidate>
+      <h2 id="login-title">Acceso restringido</h2>
+      <p class="muted">Exclusivo para <strong>Contraloría interna</strong> y <strong>Administración</strong>.
+        Cada inicio de sesión y cada consulta de información reservada queda registrada.</p>
+      <label>Usuario<input name="usuario" autocomplete="username" required maxlength="64" spellcheck="false" autocapitalize="none"></label>
+      <label>Contraseña<input name="contrasena" type="password" autocomplete="current-password" required maxlength="1024"></label>
+      <p class="form-error" id="login-error" role="alert" hidden></p>
+      <div class="actions">
+        <button type="button" class="btn ghost" id="login-cancel">Cancelar</button>
+        <button type="submit" class="btn primary" id="login-submit">Entrar</button>
+      </div>
+    </form>
+  </dialog>
+  <div class="tooltip" id="tooltip" role="status" hidden></div>
+</body>
+</html>
